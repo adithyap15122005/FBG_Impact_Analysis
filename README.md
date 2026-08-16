@@ -2,7 +2,7 @@
 
 A signal-processing pipeline for analyzing Fiber Bragg Grating (FBG) interrogator data and automatically detecting impact events.
 
-The project currently focuses on **Phase 3: Signal Processing Pipeline** and **Phase 4: Automatic Impact Detection**. Later phases will extend the processed data into Machine Learning and Deep Learning models.
+The project currently focuses on **Phase 3: Signal Processing Pipeline**, **Phase 4: Automatic Impact Detection** and **Phase 4.5: Ensemble Impact Detection with False-Positive Rejection**. Later phases will extend the processed data into Machine Learning and Deep Learning models.
 
 ---
 
@@ -27,6 +27,10 @@ Signal Filtering
 Noise Analysis
         ↓
 Impact Detection
+        ↓
+Ensemble Fusion (Phase 4.5)
+        ↓
+False-Positive Rejection (Phase 4.5)
         ↓
 Impact Start / Peak / Recovery / End
         ↓
@@ -72,6 +76,21 @@ The filters are evaluated using metrics such as:
 - Peak timing error
 
 The best filter will be selected only after evaluating multiple datasets rather than relying on a single experiment.
+
+## Phase 4.5 – Ensemble Impact Detection
+
+Completed:
+
+- Multi-method ensemble detector (peak, threshold, derivative and
+  change-point detectors run in parallel)
+- Temporal event matching across detectors
+- Weighted evidence fusion (peak deviation, detector agreement,
+  signal-to-noise)
+- Impact boundary refinement (start / peak / end)
+- False-positive rejection rules
+- Per-channel baseline drift diagnostics
+- Evaluation summary and diagnostic plots
+- Unit and scenario tests
 
 ---
 
@@ -137,6 +156,40 @@ than physical impacts; such channels should be interpreted with
 caution. No ground-truth labels exist for the expert datasets, so
 accepted events can only be audited through the diagnostic plots in
 `results/ensemble/plots/` and internal consistency metrics.
+
+---
+
+# Running the Pipeline
+
+## Phase 4.5 – Ensemble detector
+
+Run the ensemble detector on all datasets in `data/raw/`:
+
+```bash
+python run_ensemble.py --data data/raw --filter butterworth
+```
+
+Outputs are written to `results/ensemble/`:
+
+- `ensemble_summary.csv` – per dataset/channel counts and baseline
+  diagnostics (including `drift_std` and `excursion_std`)
+- `accepted_events_all_datasets.csv` – accepted impacts across datasets
+- `events_all_datasets.csv` – all candidates (accepted and rejected)
+- `events_<dataset>.json` – per-dataset structured event records
+- `plots/` – diagnostic plot per event for auditing accept/reject
+  decisions
+
+## Evaluation
+
+```bash
+python evaluate_ensemble.py --data data/raw --filter butterworth
+```
+
+## Tests
+
+```bash
+python -m pytest tests/
+```
 
 ---
 
