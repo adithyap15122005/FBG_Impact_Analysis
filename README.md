@@ -111,6 +111,33 @@ Persistence is used to reduce isolated noise detections.
 
 Attempts to identify points where the statistical behavior of the signal changes.
 
+### Ensemble fusion and false-positive rejection (Phase 4.5)
+
+Candidates from all four detectors are matched into groups, fused into
+single events and scored by weighted evidence (peak deviation, detector
+agreement and signal-to-noise). A set of rejection rules removes likely
+false positives before an event is accepted:
+
+- **Extremely short events** – below a minimum duration.
+- **No confirmed recovery** – events whose refined end reaches the end
+  of the recording never returned to baseline, so they cannot be
+  confirmed as impacts.
+- **Noise-like events** – a single detector agreed and the peak
+  deviation is too small relative to baseline noise.
+- **Low amplitude** – peak deviation below a multiple of the baseline
+  standard deviation.
+- **Insufficient detector agreement / evidence score** – fewer
+  detectors agreed or the weighted evidence is below threshold.
+
+The ensemble summary (`results/ensemble/ensemble_summary.csv`) also
+reports per-channel baseline diagnostics. Channels that exhibit large
+baseline **drift** (reported as `drift_std` and `excursion_std` in
+baseline-std units) can produce events that are drift artifacts rather
+than physical impacts; such channels should be interpreted with
+caution. No ground-truth labels exist for the expert datasets, so
+accepted events can only be audited through the diagnostic plots in
+`results/ensemble/plots/` and internal consistency metrics.
+
 ---
 
 # Impact Event Information

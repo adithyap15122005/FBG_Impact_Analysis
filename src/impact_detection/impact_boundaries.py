@@ -1,6 +1,40 @@
 import numpy as np
 
 
+def regions_to_mask(regions, signal_length):
+    """
+    Convert a list of (start, end) regions into a Boolean mask.
+
+    Parameters
+    ----------
+    regions : list of (int, int)
+        List of (start_index, end_index) tuples.
+    signal_length : int
+        Length of the signal.
+
+    Returns
+    -------
+    numpy.ndarray of bool
+        Mask with True samples inside any region.
+    """
+    mask = np.zeros(
+        signal_length,
+        dtype=bool
+    )
+
+    for start_index, end_index in regions:
+
+        start_index = max(0, int(start_index))
+        end_index = min(signal_length - 1, int(end_index))
+
+        if start_index > end_index:
+            continue
+
+        mask[start_index:end_index + 1] = True
+
+    return mask
+
+
 def find_contiguous_regions(mask):
     """
     Convert a Boolean detection mask into

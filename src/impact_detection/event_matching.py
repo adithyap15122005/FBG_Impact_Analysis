@@ -218,6 +218,156 @@ def match_candidate_regions(
     return matched_groups
 
 
+def split_group_at_support_gaps(
+    group: List[Tuple[str, Tuple[int, int]]],
+    signal_length: int,
+    min_split_gap_samples: int = 20,
+) -> List[List[Tuple[str, Tuple[int, int]]]]:
+    """
+    Split a matched group at runs of single-method support.
+
+    Transitive region matching can bridge two distinct impacts when
+    a noisy detector (e.g. the peak detector) produces spurious
+    regions between them. This function splits such a group back
+    into separate sub-groups.
+
+    The split is driven by "multi-support zones": maximal intervals
+    of the signal where at least two DIFFERENT detectors have
+    overlapping regions. When two multi-support zones are separated
+    by a gap larger than min_split_gap_samples, the group is split
+    at that gap.
+
+    Single-method stretches attached to the edges of a multi-support
+    zone (e.g. a long threshold region around a single peak) are
+    preserved because they belong to exactly one zone.
+
+    Parameters
+    ----------
+    group : list of (method, (start, end))
+        A group produced by match_candidate_regions.
+    signal_length : int
+        Length of the signal.
+    min_split_gap_samples : int
+        Minimum gap between multi-support zones before the group is
+        split. A genuine single event normally contains exactly one
+        multi-support zone and is never split.
+
+    Returns
+    -------
+    list of list of (method, (start, end))
+        Sub-groups after splitting.
+    """
+    if len(group) < 2:
+        return [group]
+
+    # ----------------------------------------------------------
+    # Per-method coverage masks (a method counts once per sample).
+    # ----------------------------------------------------------
+    method_masks = {}
+
+    for method, (start, end) in group:
+        mask = method_masks.setdefault(
+            method,
+            np.zeros(signal_length, dtype=bool),
+        )
+
+        start = max(0, int(start))
+        end = min(signal_length - 1, int(end))
+
+        if start <= end:
+            mask[start:end + 1] = True
+
+    support_count = np.zeros(signal_length, dtype=int)
+
+    for mask in method_masks.values():
+        support_count += mask.astype(int)
+
+    multi_support = support_count >= 2
+
+    # ----------------------------------------------------------
+    # Multi-support zones (contiguous True runs).
+    # ----------------------------------------------------------
+    zones = []
+
+    in_zone = False
+    zone_start = 0
+
+    for index, value in enumerate(multi_support):
+        if value and not in_zone:
+            zone_start = index
+            in_zone = True
+        elif not value and in_zone:
+            zones.append((zone_start, index - 1))
+            in_zone = False
+
+    if in_zone:
+        zones.append((zone_start, len(multi_support) - 1))
+
+    if len(zones) < 2:
+        return [group]
+
+    # ----------------------------------------------------------
+    # Group consecutive zones into clusters separated by gaps
+    # larger than min_split_gap_samples.
+    # ----------------------------------------------------------
+    clusters: List[List[Tuple[int, int]]] = []
+    current_cluster = [zones[0]]
+
+    for previous, current in zip(zones, zones[1:]):
+        gap = current[0] - previous[1] - 1
+
+        if gap > min_split_gap_samples:
+            clusters.append(current_cluster)
+            current_cluster = []
+        current_cluster.append(current)
+
+    clusters.append(current_cluster)
+
+    if len(clusters) < 2:
+        return [group]
+
+    # ----------------------------------------------------------
+    # Assign every region to the cluster it intersects (or the
+    # nearest cluster for regions with no intersection).
+    # ----------------------------------------------------------
+    cluster_extents = [
+        (cluster[0][0], cluster[-1][1])
+        for cluster in clusters
+    ]
+
+    sub_groups: List[List[Tuple[str, Tuple[int, int]]]] = (
+        [[] for _ in clusters]
+    )
+
+    for method, (start, end) in group:
+        assigned = None
+        best_distance = None
+
+        for cluster_index, (zone_start, zone_end) in enumerate(
+            cluster_extents
+        ):
+            if start <= zone_end and end >= zone_start:
+                assigned = cluster_index
+                break
+
+            distance = min(
+                abs(start - zone_end),
+                abs(end - zone_start),
+            )
+
+            if best_distance is None or distance < best_distance:
+                best_distance = distance
+                assigned = cluster_index
+
+        sub_groups[assigned].append((method, (start, end)))
+
+    return [
+        sub_group
+        for sub_group in sub_groups
+        if sub_group
+    ]
+
+
 def create_candidate_event_from_group(
     group: List[Tuple[str, Tuple[int, int]]],
     signal: np.ndarray,

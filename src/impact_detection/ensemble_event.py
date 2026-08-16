@@ -51,9 +51,16 @@ class ImpactEvent:
         Number of detection methods supporting this event.
         Automatically set based on detection_methods length.
     
-    confidence_score : float
+    evidence_score : float
         Evidence score in range [0.0, 1.0].
         NOT a calibrated probability; represents weighted evidence.
+    
+    event_id : str
+        Unique identifier for this event within the dataset.
+        Example: "expert10-FBG1-001"
+    
+    dataset : str
+        Dataset (experiment) name. Example: "expert10"
     
     channel : str
         FBG channel identifier. Example: "FBG1"
@@ -90,7 +97,11 @@ class ImpactEvent:
     
     # Detection information
     detection_methods: List[str] = field(default_factory=list)
-    confidence_score: float = 0.0
+    evidence_score: float = 0.0
+    
+    # Identification
+    event_id: str = ""
+    dataset: str = ""
     
     # Channel and status
     channel: str = "FBG1"
@@ -99,6 +110,13 @@ class ImpactEvent:
     
     # Diagnostics
     diagnostics: dict = field(default_factory=dict)
+    
+    # Backward-compatible alias for the evidence score.
+    # Older code that referenced `confidence_score` keeps working.
+    @property
+    def confidence_score(self) -> float:
+        """Deprecated alias for :attr:`evidence_score`."""
+        return self.evidence_score
     
     @property
     def method_count(self) -> int:
@@ -119,10 +137,10 @@ class ImpactEvent:
                 f"<= end_index ({self.end_index})"
             )
         
-        if self.start_time >= self.peak_time:
+        if self.start_time > self.peak_time:
             raise ValueError(
                 f"start_time ({self.start_time}) must be "
-                f"< peak_time ({self.peak_time})"
+                f"<= peak_time ({self.peak_time})"
             )
         
         if self.peak_time > self.end_time:
@@ -131,10 +149,10 @@ class ImpactEvent:
                 f"<= end_time ({self.end_time})"
             )
         
-        if self.confidence_score < 0.0 or self.confidence_score > 1.0:
+        if self.evidence_score < 0.0 or self.evidence_score > 1.0:
             raise ValueError(
-                f"confidence_score must be in [0.0, 1.0], "
-                f"got {self.confidence_score}"
+                f"evidence_score must be in [0.0, 1.0], "
+                f"got {self.evidence_score}"
             )
     
     def add_detection_method(self, method_name: str) -> None:
@@ -149,7 +167,7 @@ class ImpactEvent:
         if method_name not in self.detection_methods:
             self.detection_methods.append(method_name)
     
-    def set_confidence(self, score: float) -> None:
+    def set_evidence(self, score: float) -> None:
         """
         Set the evidence/confidence score.
         
@@ -165,9 +183,14 @@ class ImpactEvent:
         """
         if not (0.0 <= score <= 1.0):
             raise ValueError(
-                f"Confidence score must be in [0.0, 1.0], got {score}"
+                f"Evidence score must be in [0.0, 1.0], got {score}"
             )
-        self.confidence_score = score
+        self.evidence_score = score
+    
+    # Backward-compatible alias for set_evidence
+    def set_confidence(self, score: float) -> None:
+        """Deprecated alias for :meth:`set_evidence`."""
+        self.set_evidence(score)
     
     def reject(self, reason: str) -> None:
         """
@@ -196,6 +219,9 @@ class ImpactEvent:
             Flat dictionary representation of event.
         """
         return {
+            "event_id": self.event_id,
+            "dataset": self.dataset,
+            "channel": self.channel,
             "start_index": self.start_index,
             "peak_index": self.peak_index,
             "end_index": self.end_index,
@@ -206,8 +232,7 @@ class ImpactEvent:
             "duration": self.duration,
             "detection_methods": "|".join(self.detection_methods),
             "method_count": self.method_count,
-            "confidence_score": self.confidence_score,
-            "channel": self.channel,
+            "evidence_score": self.evidence_score,
             "accepted": self.accepted,
             "rejection_reason": self.rejection_reason or "",
         }
