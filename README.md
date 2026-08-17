@@ -89,8 +89,61 @@ Completed:
 - Impact boundary refinement (start / peak / end)
 - False-positive rejection rules
 - Per-channel baseline drift diagnostics
+- Data-driven single-detector selection (selected primary analysis)
 - Evaluation summary and diagnostic plots
 - Unit and scenario tests
+
+---
+
+# Selected Primary Analysis
+
+In addition to the multi-method ensemble, a **single-detector** path
+is provided for a controlled comparison. It operates only on the
+FBG2 channel filtered with Savitzky-Golay (window 11, polyorder 3)
+and runs exactly one detector. It does not use ensemble fusion.
+
+The detector is **not hardcoded**: it is chosen from the actual
+results. `src/analysis/method_selection.py` runs each of the four
+detectors (peak, threshold, derivative, change_point) on FBG2 +
+Savitzky-Golay across all datasets and scores them as:
+
+```text
+score = coverage x plausible_fraction x median_dev_std
+```
+
+where:
+
+- `coverage` – fraction of datasets with at least one accepted event
+  (recall proxy).
+- `plausible_fraction` – fraction of events whose duration falls in
+  [0.1 s, 3.0 s]. Events far shorter are glitch/edge artifacts;
+  events far longer are usually drift or merged impacts.
+- `median_dev_std` – median |peak - baseline| / baseline_std (impact
+  strength proxy).
+
+On the current `data/raw/` sets the selection is:
+
+| method | events | coverage | median_dev_std | plausible_fraction | score |
+|--------|-------:|---------:|---------------:|-------------------:|------:|
+| **peak** | 110 | 0.83 | 64.9 | 0.955 | **51.7** |
+| derivative | 12 | 0.83 | 29.3 | 0.583 | 14.2 |
+| threshold | 8 | 0.67 | 19.0 | 0.500 | 6.4 |
+| change_point | 15 | 0.83 | 64.1 | 0.000 | 0.0 |
+
+Peak is selected: it finds the strongest, most physically plausible
+events (durations ~0.4-1.3 s), while derivative/change-point detect
+only glitch/edge-scale events (<= 0.23 s) and threshold produces
+very long merged excursions. Run `python run_selected.py` to
+recompute this table on the current data; the comparison is printed
+before processing and an auditable `method_comparison.csv` can be
+produced from it.
+
+Selected-path events go through the same amplitude (>= 5x baseline
+std), minimum-duration and confirmed-recovery gates as the ensemble,
+with only the multi-detector agreement/evidence rules relaxed (a
+single method can never satisfy ">= 2 detectors agreed"). Accepted
+events therefore carry a meaningful `evidence_score` (the selected
+detector's weight, e.g. 0.30 for peak) and `accepted` flag.
 
 ---
 
@@ -178,6 +231,26 @@ Outputs are written to `results/ensemble/`:
 - `events_<dataset>.json` – per-dataset structured event records
 - `plots/` – diagnostic plot per event for auditing accept/reject
   decisions
+
+## Selected primary analysis (single detector)
+
+Run the data-driven single-detector analysis on FBG2 + Savitzky-Golay:
+
+```bash
+python run_selected.py --data data/raw
+```
+
+The best detector is chosen from the results and printed before
+processing. Override with `--method peak` (or threshold/derivative/
+change_point). Outputs are written to `results/selected/`:
+
+- `selected_summary.csv` – per-dataset channel/method counts and
+  baseline diagnostics
+- `selected_accepted_all_datasets.csv` – accepted events
+- `selected_events_all_datasets.csv` – all candidates (accepted and
+  rejected)
+- `selected_events_<dataset>.json` – per-dataset structured records
+- `plots/` – diagnostic plot per event
 
 ## Evaluation
 
