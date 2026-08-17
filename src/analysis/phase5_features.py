@@ -104,6 +104,11 @@ class Phase5Features:
     absolute_peak_shift: float
     rise_time: float
     recovery_time: float
+    peak_width: float = float("nan")
+    max_slope: float = float("nan")
+    rms: float = float("nan")
+    signal_energy: float = float("nan")
+    peak_to_peak: float = float("nan")
     post_impact_level: float = float("nan")
     residual_shift: float = float("nan")
     residual_n_samples: int = 0
@@ -126,6 +131,11 @@ class Phase5Features:
             "residual_shift": self.residual_shift,
             "rise_time": self.rise_time,
             "recovery_time": self.recovery_time,
+            "peak_width": self.peak_width,
+            "max_slope": self.max_slope,
+            "rms": self.rms,
+            "signal_energy": self.signal_energy,
+            "peak_to_peak": self.peak_to_peak,
             "residual_n_samples": self.residual_n_samples,
             "residual_reason": self.residual_reason,
         }
@@ -210,6 +220,79 @@ def compute_recovery_time(
 # ------------------------------------------------------------------
 # Residual shift
 # ------------------------------------------------------------------
+def compute_peak_width(
+    start_time: float,
+    end_time: float,
+) -> float:
+    """
+    Peak width of the event.
+    """
+
+    return float(end_time - start_time)
+
+
+def compute_max_slope(
+    signal_window: np.ndarray,
+    time_window: np.ndarray,
+) -> float:
+    """
+    Maximum absolute slope during the impact event.
+    """
+
+    if len(signal_window) < 2:
+        return float("nan")
+
+    slopes = np.gradient(
+        signal_window,
+        time_window,
+    )
+
+    return float(
+        np.max(np.abs(slopes))
+    )
+
+
+def compute_rms(
+    signal_window: np.ndarray,
+) -> float:
+    """
+    RMS value of the impact window.
+    """
+
+    return float(
+        np.sqrt(
+            np.mean(signal_window ** 2)
+        )
+    )
+
+
+def compute_signal_energy(
+    signal_window: np.ndarray,
+    time_window: np.ndarray,
+) -> float:
+    """
+    Energy contained in the impact response.
+    """
+
+    return float(
+        np.trapz(
+            signal_window ** 2,
+            time_window,
+        )
+    )
+
+
+def compute_peak_to_peak(
+    signal_window: np.ndarray,
+) -> float:
+    """
+    Peak-to-peak amplitude.
+    """
+
+    return float(
+        np.max(signal_window)
+        - np.min(signal_window)
+    )
 
 def estimate_post_impact_level(
     signal: np.ndarray,
@@ -352,6 +435,11 @@ def extract_features(
     """
     signal = np.asarray(signal, dtype=float)
     time = np.asarray(time, dtype=float)
+    start_idx = event.start_index
+    end_idx = event.end_index
+
+    signal_window = signal[start_idx:end_idx + 1]
+    time_window = time[start_idx:end_idx + 1]
 
     peak_shift_value = compute_peak_shift(
         event.peak_value,
@@ -366,6 +454,28 @@ def extract_features(
     recovery_time_value = compute_recovery_time(
         event.peak_time,
         event.end_time,
+    )
+    peak_width_value = compute_peak_width(
+    event.start_time,
+    event.end_time,
+    )
+
+    max_slope_value = compute_max_slope(
+    signal_window,
+    time_window,
+    )
+
+    rms_value = compute_rms(
+    signal_window,
+    )
+
+    signal_energy_value = compute_signal_energy(
+    signal_window,
+    time_window,
+    )
+
+    peak_to_peak_value = compute_peak_to_peak(
+    signal_window,
     )
 
     excluded_regions: List[Tuple[int, int]] = []
@@ -401,6 +511,11 @@ def extract_features(
         absolute_peak_shift=float(abs(peak_shift_value)),
         rise_time=rise_time_value,
         recovery_time=recovery_time_value,
+        peak_width=peak_width_value,
+        max_slope=max_slope_value,
+        rms=rms_value,
+        signal_energy=signal_energy_value,
+        peak_to_peak=peak_to_peak_value,
         post_impact_level=level,
         residual_shift=residual_shift_value,
         residual_n_samples=n_samples,
@@ -460,6 +575,11 @@ __all__ = [
     "compute_rise_time",
     "compute_recovery_time",
     "estimate_post_impact_level",
+    "compute_peak_width",
+    "compute_max_slope",
+    "compute_rms",
+    "compute_signal_energy",
+    "compute_peak_to_peak",
     "post_impact_excluded_regions",
     "extract_features",
     "extract_phase5_dataset",

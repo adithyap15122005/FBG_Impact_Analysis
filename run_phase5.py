@@ -193,23 +193,32 @@ def main():
     dataframe = pd.DataFrame(all_records)
 
     columns = [
-        "dataset",
-        "fbg",
-        "impact_id",
-        "start_time",
-        "peak_time",
-        "end_time",
-        "pre_impact_baseline",
-        "peak_value",
-        "peak_shift",
-        "absolute_peak_shift",
-        "post_impact_level",
-        "residual_shift",
-        "rise_time",
-        "recovery_time",
-        "residual_n_samples",
-        "residual_reason",
-    ]
+    "dataset",
+    "fbg",
+    "impact_id",
+    "start_time",
+    "peak_time",
+    "end_time",
+    "pre_impact_baseline",
+    "peak_value",
+
+    "peak_shift",
+    "absolute_peak_shift",
+    "post_impact_level",
+    "residual_shift",
+
+    "rise_time",
+    "recovery_time",
+
+    "peak_width",
+    "max_slope",
+    "rms",
+    "signal_energy",
+    "peak_to_peak",
+
+    "residual_n_samples",
+    "residual_reason",
+]
 
     dataframe = dataframe[columns]
 
