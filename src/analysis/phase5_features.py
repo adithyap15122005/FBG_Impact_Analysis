@@ -275,7 +275,7 @@ def compute_signal_energy(
     """
 
     return float(
-        np.trapz(
+        np.trapezoid(
             signal_window ** 2,
             time_window,
         )
