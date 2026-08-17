@@ -2,7 +2,7 @@
 
 A signal-processing pipeline for analyzing Fiber Bragg Grating (FBG) interrogator data and automatically detecting impact events.
 
-The project currently focuses on **Phase 3: Signal Processing Pipeline**, **Phase 4: Automatic Impact Detection** and **Phase 4.5: Ensemble Impact Detection with False-Positive Rejection**. Later phases will extend the processed data into Machine Learning and Deep Learning models.
+The project currently focuses on **Phase 3: Signal Processing Pipeline**, **Phase 4: Automatic Impact Detection**, **Phase 4.5: Ensemble Impact Detection with False-Positive Rejection** and **Phase 5: Impact Feature Extraction**. Later phases will extend the processed data into Machine Learning and Deep Learning models.
 
 ---
 
@@ -33,6 +33,8 @@ Ensemble Fusion (Phase 4.5)
 False-Positive Rejection (Phase 4.5)
         ↓
 Impact Start / Peak / Recovery / End
+        ↓
+Impact Feature Extraction (Phase 5)
         ↓
 Machine Learning / Deep Learning
         ↓
@@ -93,6 +95,19 @@ Completed:
 - Evaluation summary and diagnostic plots
 - Unit and scenario tests
 
+## Phase 5 – Impact Feature Extraction
+
+Completed:
+
+- Peak Shift, Residual Shift, Rise Time and Recovery Time extraction
+  from the accepted Peak Detection events of the selected pipeline
+- Reuse of the existing FBG2 Savitzky-Golay signal and boundaries
+- Robust residual-shift estimation (median of a stable post-recovery
+  window, excluding other detected impacts; NaN + reason when data
+  is insufficient)
+- Diagnostic feature plots (`results/phase5/plots/`)
+- Unit tests for the feature calculations
+
 ---
 
 # Selected Primary Analysis
@@ -144,6 +159,78 @@ with only the multi-detector agreement/evidence rules relaxed (a
 single method can never satisfy ">= 2 detectors agreed"). Accepted
 events therefore carry a meaningful `evidence_score` (the selected
 detector's weight, e.g. 0.30 for peak) and `accepted` flag.
+
+---
+
+# Phase 5 – Impact Feature Extraction
+
+Phase 5 consumes the **accepted** Peak Detection events produced by
+the selected primary analysis (FBG2 + Savitzky-Golay + Peak
+Detection) and extracts four scalar features per event:
+
+**Peak Shift**
+
+The difference between the peak wavelength shift and the
+pre-impact baseline:
+
+```text
+peak_shift = peak_value - pre_impact_baseline
+```
+
+**Residual Shift**
+
+The remaining offset between the post-impact stable level and the
+pre-impact baseline:
+
+```text
+residual_shift = post_impact_level - pre_impact_baseline
+```
+
+The post-impact stable level is the **median** of a window after the
+recovery/end point (the window starts a small gap after the event
+end, contains enough samples, and excludes any region belonging to
+another detected event). When there is not enough valid post-impact
+data the residual features are NaN with a recorded reason. Residual
+shift is only a signal offset relative to the baseline; it is not
+claimed to represent physical damage.
+
+**Rise Time**
+
+```text
+rise_time = peak_time - start_time
+```
+
+**Recovery Time**
+
+```text
+recovery_time = end_time - peak_time
+```
+
+Rise and recovery times reuse the existing start / peak /
+recovery-end boundaries produced by the selected pipeline's boundary
+refinement (the end is the first sample after the peak where the
+filtered signal stays within the recovery tolerance for
+`confirmation_samples` consecutive samples).
+
+Phase 5 introduces no new detector and no ML/DL. It uses the same
+FBG2 Savitzky-Golay signal and the same pre-impact baseline as the
+selected pipeline.
+
+Run:
+
+```bash
+python run_phase5.py --data data/raw
+```
+
+Outputs are written to `results/phase5/`:
+
+- `phase5_features_all_datasets.csv` – one row per accepted event
+  with `dataset`, `fbg`, `impact_id`, `start_time`, `peak_time`,
+  `end_time`, `pre_impact_baseline`, `peak_value`, `peak_shift`,
+  `absolute_peak_shift`, `post_impact_level`, `residual_shift`,
+  `rise_time`, `recovery_time`
+- `plots/` – a small set of diagnostic plots per dataset showing the
+  signal, baseline, start/peak/end boundaries and the four features
 
 ---
 
