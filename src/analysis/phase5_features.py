@@ -310,7 +310,7 @@ def compute_standard_deviation(signal_window):
 
 
 def compute_area_under_curve(signal_window, time_window):
-    return float(np.trapz(np.abs(signal_window), time_window))
+    return float(np.trapezoid(np.abs(signal_window), time_window))
 
 
 def compute_entropy(signal_window):
