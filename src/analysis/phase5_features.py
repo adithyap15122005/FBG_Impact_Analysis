@@ -109,6 +109,10 @@ class Phase5Features:
     rms: float = float("nan")
     signal_energy: float = float("nan")
     peak_to_peak: float = float("nan")
+    variance: float = float("nan")
+    standard_deviation: float = float("nan")
+    entropy: float = float("nan")
+    area_under_curve: float = float("nan")
     post_impact_level: float = float("nan")
     residual_shift: float = float("nan")
     residual_n_samples: int = 0
@@ -136,6 +140,10 @@ class Phase5Features:
             "rms": self.rms,
             "signal_energy": self.signal_energy,
             "peak_to_peak": self.peak_to_peak,
+            "variance": self.variance,
+            "standard_deviation": self.standard_deviation,
+            "entropy": self.entropy,
+            "area_under_curve": self.area_under_curve,
             "residual_n_samples": self.residual_n_samples,
             "residual_reason": self.residual_reason,
         }
@@ -292,6 +300,30 @@ def compute_peak_to_peak(
     return float(
         np.max(signal_window)
         - np.min(signal_window)
+    )
+def compute_variance(signal_window):
+    return float(np.var(signal_window))
+
+
+def compute_standard_deviation(signal_window):
+    return float(np.std(signal_window))
+
+
+def compute_area_under_curve(signal_window, time_window):
+    return float(np.trapz(np.abs(signal_window), time_window))
+
+
+def compute_entropy(signal_window):
+    hist, _ = np.histogram(
+        signal_window,
+        bins=20,
+        density=True,
+    )
+
+    hist = hist[hist > 0]
+
+    return float(
+        -np.sum(hist * np.log2(hist))
     )
 
 def estimate_post_impact_level(
@@ -477,6 +509,26 @@ def extract_features(
     peak_to_peak_value = compute_peak_to_peak(
     signal_window,
     )
+    variance_value = compute_variance(
+    signal_window,
+)
+
+    standard_deviation_value = (
+    compute_standard_deviation(
+        signal_window,
+    )
+)
+
+    entropy_value = compute_entropy(
+    signal_window,
+)
+
+    area_under_curve_value = (
+    compute_area_under_curve(
+        signal_window,
+        time_window,
+    )
+)
 
     excluded_regions: List[Tuple[int, int]] = []
 
@@ -516,6 +568,10 @@ def extract_features(
         rms=rms_value,
         signal_energy=signal_energy_value,
         peak_to_peak=peak_to_peak_value,
+        variance=variance_value,
+        standard_deviation=standard_deviation_value,
+        entropy=entropy_value,
+        area_under_curve=area_under_curve_value,
         post_impact_level=level,
         residual_shift=residual_shift_value,
         residual_n_samples=n_samples,

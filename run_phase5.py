@@ -215,6 +215,10 @@ def main():
     "rms",
     "signal_energy",
     "peak_to_peak",
+    "variance",
+    "standard_deviation",
+    "entropy",
+    "area_under_curve",
 
     "residual_n_samples",
     "residual_reason",
