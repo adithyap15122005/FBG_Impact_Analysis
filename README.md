@@ -2,7 +2,7 @@
 
 A signal-processing pipeline for analyzing Fiber Bragg Grating (FBG) interrogator data and automatically detecting impact events.
 
-The project currently focuses on **Phase 3: Signal Processing Pipeline**, **Phase 4: Automatic Impact Detection**, **Phase 4.5: Ensemble Impact Detection with False-Positive Rejection** and **Phase 5: Impact Feature Extraction**. Later phases will extend the processed data into Machine Learning and Deep Learning models.
+The project currently focuses on **Phase 3: Signal Processing Pipeline**, **Phase 4: Automatic Impact Detection**, **Phase 4.5: Ensemble Impact Detection with False-Positive Rejection**, **Phase 5: Impact Feature Extraction**, and **Phase 6: Multi-Domain Signal Analysis**. Later phases will extend the processed data into Machine Learning and Deep Learning models.
 
 ---
 
@@ -35,6 +35,8 @@ False-Positive Rejection (Phase 4.5)
 Impact Start / Peak / Recovery / End
         ↓
 Impact Feature Extraction (Phase 5)
+        ↓
+Multi-Domain Signal Analysis (Phase 6)
         ↓
 Machine Learning / Deep Learning
         ↓
@@ -231,6 +233,99 @@ Outputs are written to `results/phase5/`:
   `rise_time`, `recovery_time`
 - `plots/` – a small set of diagnostic plots per dataset showing the
   signal, baseline, start/peak/end boundaries and the four features
+
+---
+
+# Phase 6 – Multi-Domain Signal Analysis
+
+Phase 6 consumes the **accepted** Peak Detection events from the
+selected primary analysis (FBG2 + Savitzky-Golay + Peak Detection)
+and extracts signal features in three domains:
+
+1. **Time Domain** – statistical and shape features of the event
+   signal segment.
+2. **Frequency Domain** – FFT-based spectral features.
+3. **Time-Frequency Domain** – lightweight STFT features.
+
+Phase 6 is **additive**: it does not redesign or break previous
+phases. It reuses the same filtered signal, event boundaries, and
+Phase 5 context.
+
+## Time-Domain Features
+
+| Feature | Definition |
+|---------|-----------|
+| mean | (1/N) * sum(x_i) |
+| median | middle value of sorted x |
+| std | population standard deviation |
+| variance | population variance |
+| rms | sqrt((1/N) * sum(x_i^2)) |
+| minimum / maximum | min(x) / max(x) |
+| peak_to_peak | max(x) - min(x) |
+| skewness | third standardized moment |
+| kurtosis | excess kurtosis (fourth moment - 3) |
+| crest_factor | max(|x|) / RMS |
+
+## Frequency-Domain (FFT) Features
+
+Sampling frequency is estimated from timestamps using the median of
+positive time differences (not hardcoded).
+
+| Feature | Definition |
+|---------|-----------|
+| dominant_frequency_hz | frequency with the largest non-DC spectral magnitude |
+| dominant_magnitude | magnitude at the dominant frequency |
+| spectral_energy | sum(|X_k|^2) – Parseval-consistent relative energy |
+| spectral_entropy | Shannon entropy of normalized spectral power (bits) |
+| spectral_centroid_hz | energy-weighted mean frequency |
+| spectral_bandwidth_hz | energy-weighted spread around centroid |
+| spectral_flatness | geometric_mean / arithmetic_mean of power spectrum |
+| spectral_rolloff_hz | frequency below which 85% of energy is contained |
+
+**Spectral Energy** is the sum of squared one-sided FFT magnitudes.
+By Parseval's theorem this is proportional to the total signal
+energy in the event window.
+
+**Spectral Entropy** normalizes the spectral power into a probability
+distribution and computes Shannon entropy. A concentrated spectrum
+(single tone) gives low entropy; a flat/broadband spectrum gives high
+entropy.
+
+## Time-Frequency (STFT) Features
+
+STFT parameters adapt to event length. Short events (< 16 samples)
+are skipped with NaN and a recorded reason.
+
+| Feature | Definition |
+|---------|-----------|
+| stft_peak_frequency_hz | frequency with highest STFT magnitude |
+| stft_max_energy | maximum frame energy in the spectrogram |
+
+## Running Phase 6
+
+```bash
+python run_phase6.py --data data/raw --out results/phase6
+```
+
+Options:
+- `--max-plots-per-dataset N` – per-event diagnostic plots (default 3)
+- `--no-plots` – skip all plots
+- `--no-stft` – disable STFT analysis
+
+## Phase 6 Outputs
+
+Written to `results/phase6/`:
+
+- `phase6_multidomain_features.csv` – one row per accepted event
+- `phase6_summary.csv` – aggregate statistics
+- `phase6_config.json` – analysis configuration
+- `plots/` – per-event 3-panel diagnostic plots + aggregate
+  distributions (dominant frequency, spectral entropy, frequency
+  vs peak shift, energy vs peak shift)
+
+**Phase 6 features are signal descriptors and candidate features for
+future analysis/ML. A frequency feature does not directly identify a
+physical damage mechanism without ground-truth validation.**
 
 ---
 
