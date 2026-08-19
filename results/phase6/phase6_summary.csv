@@ -1,0 +1,2 @@
+total_accepted_events,successfully_analyzed,partial_analysis,failed_analysis,valid_stft_count,dominant_frequency_mean_hz,dominant_frequency_median_hz,dominant_frequency_std_hz,spectral_energy_mean,spectral_energy_median,spectral_entropy_mean,spectral_entropy_median
+110,108,2,0,108,2.7287865225283436,2.3809523809528548,1.1832827102664005,0.0011635705623539363,0.00011122308230207792,2.593599063353443,2.3605093077782295

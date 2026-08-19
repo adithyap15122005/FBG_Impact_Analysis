@@ -22,6 +22,7 @@ import json
 import sys
 from pathlib import Path
 
+import numpy as np
 import pandas as pd
 
 from src.analysis.phase5_features import extract_phase5_dataset
@@ -307,8 +308,6 @@ def _build_summary(
         if np.isfinite(f.spectral_entropy)
     ]
 
-    import numpy as np
-
     summary = {
         "total_accepted_events": total_accepted,
         "successfully_analyzed": total_ok,
@@ -351,8 +350,6 @@ def _build_summary(
 
 def _print_summary(summary, features_file):
     """Print a concise terminal summary."""
-    import numpy as np
-
     print("\n" + "=" * 70)
     print("PHASE 6 SUMMARY")
     print("=" * 70)
@@ -393,6 +390,4 @@ def _print_summary(summary, features_file):
 
 
 if __name__ == "__main__":
-    import numpy as np
-
     main()

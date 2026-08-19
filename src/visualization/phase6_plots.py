@@ -25,7 +25,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from numpy.fft import rfft, rfftfreq
 
-from .phase6_multidomain import Phase6Features
+from ..analysis.phase6_multidomain import Phase6Features
 
 # Samples shown around the event in the zoomed panel.
 PAD_BEFORE_SAMPLES = 20

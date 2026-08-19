@@ -1,0 +1,9 @@
+{
+  "remove_dc": true,
+  "fft_window": "hann",
+  "minimum_fft_samples": 8,
+  "spectral_rolloff_percentage": 85.0,
+  "enable_stft": true,
+  "minimum_stft_samples": 16,
+  "stft_overlap_ratio": 0.5
+}
